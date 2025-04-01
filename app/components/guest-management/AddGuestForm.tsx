@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+// Remove standard Input import if only NumericInput is used for numbers
+// import { Input } from '@/components/ui/input';
+import { Input } from '@/components/ui/input'; // Keep for Name input
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { NumericInput } from '@/components/ui/numeric-input'; // Import the new component
 
 // Define the props for the component
 interface AddGuestFormProps {
@@ -21,9 +24,9 @@ const AddGuestForm: React.FC<AddGuestFormProps> = ({ onAddGuest }) => {
   // Handle form submission
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    // Ensure values are numbers and non-negative
-    const numAdults = Math.max(0, parseInt(String(adults), 10) || 0);
-    const numChildren = Math.max(0, parseInt(String(children), 10) || 0);
+    // Use the state values directly as they should be valid numbers controlled by NumericInput
+    const numAdults = adults;
+    const numChildren = children;
 
     if (guestName.trim() && numAdults + numChildren > 0) {
       // Ensure at least one person is attending
@@ -68,30 +71,23 @@ const AddGuestForm: React.FC<AddGuestFormProps> = ({ onAddGuest }) => {
           {/* Adults Input */}
           <div className='grid gap-2'>
             <Label htmlFor='adults'>Adultos</Label>
-            <Input
+            <NumericInput
               id='adults'
-              type='number'
               value={adults}
-              onChange={
-                (e: React.ChangeEvent<HTMLInputElement>) =>
-                  setAdults(Math.max(0, parseInt(e.target.value, 10) || 0)) // Allow 0 adults initially, validation on submit
-              }
-              min='0' // Minimum 0 adults
-              required
+              onChange={setAdults} // Pass the state setter directly
+              min={0} // Allow 0 adults initially
+              // No need for required here as validation is in handleSubmit
             />
           </div>
           {/* Children Input */}
           <div className='grid gap-2'>
             <Label htmlFor='children'>Niños</Label>
-            <Input
+            <NumericInput
               id='children'
-              type='number'
               value={children}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setChildren(Math.max(0, parseInt(e.target.value, 10) || 0))
-              }
-              min='0' // Minimum 0 children
-              required
+              onChange={setChildren} // Pass the state setter directly
+              min={0} // Allow 0 children
+              // No need for required here
             />
           </div>
           <Button type='submit' className='w-full'>

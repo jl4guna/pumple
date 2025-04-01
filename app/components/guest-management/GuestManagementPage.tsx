@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AddGuestForm from './AddGuestForm'; // Importar AddGuestForm
 import GuestList from './GuestList'; // Importar GuestList
+import GuestStats from './GuestStats'; // Import the new stats component
 // Importaremos los otros componentes aquí más tarde
 
 // Define the structure of a guest object
@@ -93,6 +94,9 @@ const GuestManagementPage: React.FC = () => {
       <h1 className='text-2xl font-bold mb-6 text-center'>
         Administración de Invitados
       </h1>
+
+      {/* Render GuestStats component here, passing the guests list */}
+      <GuestStats guests={guests} />
 
       <div className='flex flex-col md:flex-row md:space-x-6'>
         <div className='flex-shrink-0 md:w-1/3 mb-6 md:mb-0'>

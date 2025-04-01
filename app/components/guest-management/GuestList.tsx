@@ -60,69 +60,78 @@ const GuestList: React.FC<GuestListProps> = ({
         <CardTitle className='text-lg'>Lista de Invitados</CardTitle>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead className='w-[80px] text-center'>Adultos</TableHead>
-              <TableHead className='w-[80px] text-center'>Niños</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className='text-right'>Acciones</TableHead>{' '}
-              {/* Align Actions header to the right */}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {guests.length === 0 ? (
+        {/* Add a container div for horizontal scrolling on small screens */}
+        <div className='overflow-x-auto'>
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={5} className='text-center h-24'>
-                  {' '}
-                  {/* Span across columns and center text */}
-                  No hay invitados todavía.
-                </TableCell>
+                {/* Consider adding min-width to prevent excessive shrinking */}
+                <TableHead className='min-w-[150px]'>Nombre</TableHead>
+                <TableHead className='w-[80px] text-center'>Adultos</TableHead>
+                <TableHead className='w-[80px] text-center'>Niños</TableHead>
+                <TableHead className='min-w-[180px]'>Estado</TableHead>{' '}
+                {/* Ensure status select fits */}
+                <TableHead className='text-right min-w-[100px]'>
+                  Acciones
+                </TableHead>{' '}
+                {/* Ensure button fits */}
               </TableRow>
-            ) : (
-              guests.map((guest) => (
-                <TableRow key={guest.id}>
-                  <TableCell className='font-medium'>{guest.name}</TableCell>{' '}
-                  {/* Medium font weight for name */}
-                  <TableCell className='text-center'>{guest.adults}</TableCell>
-                  <TableCell className='text-center'>
-                    {guest.children}
-                  </TableCell>
-                  <TableCell>
-                    {/* Select component for status */}
-                    <Select
-                      value={guest.status}
-                      onValueChange={(newStatus: Guest['status']) => {
-                        onUpdateStatus(guest.id, newStatus);
-                      }}>
-                      <SelectTrigger className='w-[180px]'>
-                        {' '}
-                        {/* Fixed width for trigger */}
-                        <SelectValue placeholder='Seleccionar estado' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='pending'>Pendiente</SelectItem>
-                        <SelectItem value='confirmed'>Confirmado</SelectItem>
-                        <SelectItem value='declined'>Rechazado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell className='text-right'>
+            </TableHeader>
+            <TableBody>
+              {guests.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className='text-center h-24'>
                     {' '}
-                    {/* Align button to the right */}
-                    <Button
-                      variant='outline' // Use outline style for less emphasis
-                      size='sm' // Smaller button
-                      onClick={() => onRemoveGuest(guest.id)}>
-                      Eliminar
-                    </Button>
+                    {/* Span across columns and center text */}
+                    No hay invitados todavía.
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                guests.map((guest) => (
+                  <TableRow key={guest.id}>
+                    <TableCell className='font-medium'>{guest.name}</TableCell>{' '}
+                    {/* Medium font weight for name */}
+                    <TableCell className='text-center'>
+                      {guest.adults}
+                    </TableCell>
+                    <TableCell className='text-center'>
+                      {guest.children}
+                    </TableCell>
+                    <TableCell>
+                      {/* Select component for status */}
+                      <Select
+                        value={guest.status}
+                        onValueChange={(newStatus: Guest['status']) => {
+                          onUpdateStatus(guest.id, newStatus);
+                        }}>
+                        <SelectTrigger className='w-full'>
+                          {' '}
+                          {/* Allow trigger to fill cell */}
+                          <SelectValue placeholder='Seleccionar estado' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='pending'>Pendiente</SelectItem>
+                          <SelectItem value='confirmed'>Confirmado</SelectItem>
+                          <SelectItem value='declined'>Rechazado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className='text-right'>
+                      {' '}
+                      {/* Align button to the right */}
+                      <Button
+                        variant='outline' // Use outline style for less emphasis
+                        size='sm' // Smaller button
+                        onClick={() => onRemoveGuest(guest.id)}>
+                        Eliminar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );
