@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AddGuestForm from './AddGuestForm'; // Importar AddGuestForm
 import GuestList from './GuestList'; // Importar GuestList
 import GuestStats from './GuestStats'; // Import the new stats component
+import { Button } from '@/components/ui/button'; // Import Button for export/import
+import Papa from 'papaparse'; // Import papaparse
 // Importaremos los otros componentes aquí más tarde
 
 // Define the structure of a guest object
@@ -89,6 +91,160 @@ const GuestManagementPage: React.FC = () => {
     setGuests((prevGuests) => prevGuests.filter((guest) => guest.id !== id));
   };
 
+  // --- CSV Export Logic ---
+  const handleExportCSV = () => {
+    if (guests.length === 0) {
+      alert('No hay invitados para exportar.');
+      return;
+    }
+
+    // We only need specific fields for export, excluding 'id'
+    const dataToExport = guests.map(({ name, status, adults, children }) => ({
+      Nombre: name,
+      Estado: status,
+      Adultos: adults,
+      Niños: children,
+    }));
+
+    const csv = Papa.unparse(dataToExport);
+
+    // Create a Blob from the CSV string
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+
+    // Create a link element
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      // Check if browser supports download attribute
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'invitados_fiesta.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url); // Clean up the object URL
+    } else {
+      alert('La exportación directa no es soportada por tu navegador.');
+    }
+  };
+
+  // --- CSV Import Logic ---
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  // Updated handleFileChange to parse and process the CSV
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return; // No file selected
+    }
+
+    Papa.parse<Record<string, string>>(file, {
+      header: true, // Expect headers (Nombre, Estado, Adultos, Niños)
+      skipEmptyLines: true,
+      complete: (results) => {
+        const importedGuests: Guest[] = [];
+        let errors: string[] = [];
+
+        results.data.forEach((row, index) => {
+          const name = row.Nombre?.trim();
+          const status = row.Estado?.trim().toLowerCase() as Guest['status'];
+          const adults = parseInt(row.Adultos, 10);
+          const children = parseInt(row.Niños, 10);
+
+          // Basic Validation
+          if (!name) {
+            errors.push(`Fila ${index + 2}: Falta el nombre.`);
+            return; // Skip this row
+          }
+          if (!['pending', 'confirmed', 'declined'].includes(status)) {
+            errors.push(
+              `Fila ${index + 2} (${name}): Estado inválido ('${
+                row.Estado
+              }'). Usar 'pending', 'confirmed', o 'declined'.`
+            );
+            return; // Skip this row
+          }
+          if (isNaN(adults) || adults < 0) {
+            errors.push(
+              `Fila ${index + 2} (${name}): Número de adultos inválido ('${
+                row.Adultos
+              }').`
+            );
+            return; // Skip this row
+          }
+          if (isNaN(children) || children < 0) {
+            errors.push(
+              `Fila ${index + 2} (${name}): Número de niños inválido ('${
+                row.Niños
+              }').`
+            );
+            return; // Skip this row
+          }
+          if (adults === 0 && children > 0) {
+            errors.push(
+              `Fila ${
+                index + 2
+              } (${name}): Debe haber al menos 1 adulto si hay niños.`
+            );
+            return; // Skip this row
+          }
+          if (adults + children === 0) {
+            errors.push(
+              `Fila ${
+                index + 2
+              } (${name}): Debe haber al menos 1 asistente (adulto o niño).`
+            );
+            return; // Skip this row
+          }
+
+          // Add valid guest
+          importedGuests.push({
+            id: Date.now() + index, // Generate a pseudo-unique ID
+            name,
+            status,
+            adults,
+            children,
+          });
+        });
+
+        if (errors.length > 0) {
+          // Show errors to the user
+          alert(
+            `Errores al importar:\n\n${errors.join(
+              '\n'
+            )}\n\nNo se importaron las filas con errores.`
+          );
+        }
+
+        if (importedGuests.length > 0) {
+          // Ask for confirmation before replacing the list
+          const replaceConfirm = window.confirm(
+            `Se importaron ${importedGuests.length} invitados válidos. ¿Deseas reemplazar la lista actual con estos invitados?`
+          );
+          if (replaceConfirm) {
+            setGuests(importedGuests);
+            alert('Lista de invitados importada con éxito.');
+          }
+        } else if (errors.length === 0) {
+          alert('No se encontraron invitados válidos en el archivo.');
+        }
+      },
+      error: (error) => {
+        console.error('Error parsing CSV:', error);
+        alert(`Error al leer el archivo CSV: ${error.message}`);
+      },
+    });
+
+    // Reset file input to allow selecting the same file again
+    if (event.target) {
+      event.target.value = '';
+    }
+  };
+
   return (
     <div className='container mx-auto p-4 md:p-6 lg:p-8'>
       <h1 className='text-2xl font-bold mb-6 text-center'>
@@ -97,6 +253,27 @@ const GuestManagementPage: React.FC = () => {
 
       {/* Render GuestStats component here, passing the guests list */}
       <GuestStats guests={guests} />
+
+      {/* Export/Import Buttons Section */}
+      <div className='flex justify-end space-x-2 mb-4'>
+        {' '}
+        {/* Align buttons to the right */}
+        <Button variant='outline' onClick={handleExportCSV}>
+          Exportar CSV
+        </Button>
+        {/* Import Button - will trigger hidden file input */}
+        <Button variant='outline' onClick={handleImportClick}>
+          Importar CSV
+        </Button>
+        {/* Hidden file input */}
+        <input
+          type='file'
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept='.csv'
+          style={{ display: 'none' }}
+        />
+      </div>
 
       <div className='flex flex-col md:flex-row md:space-x-6'>
         <div className='flex-shrink-0 md:w-1/3 mb-6 md:mb-0'>
