@@ -16,17 +16,9 @@ import {
   TableRow,
 } from '@/components/ui/table'; // Import Table components
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Import Card components
+import type { Guest } from '@/app/types'; // Import shared Guest type
 
-// Re-using the Guest interface (consider moving to a shared types file)
-interface Guest {
-  id: number;
-  name: string;
-  status: 'pending' | 'confirmed' | 'declined';
-  adults: number;
-  children: number;
-}
-
-// Define the props for the component
+// Define the props for the component using the imported Guest type
 interface GuestListProps {
   guests: Guest[]; // The list of guests to display
   onUpdateStatus: (id: number, newStatus: Guest['status']) => void; // Function to update status

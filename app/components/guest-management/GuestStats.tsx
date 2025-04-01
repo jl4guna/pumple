@@ -1,15 +1,11 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import type { Guest } from '@/app/types'; // Import shared Guest type
 
-// Re-use the Guest interface (Should be moved to a shared file eventually)
-interface Guest {
-  id: number;
-  name: string;
-  status: 'pending' | 'confirmed' | 'declined';
-  adults: number;
-  children: number;
-}
+// Remove local Guest interface definition
+// interface Guest { ... }
 
+// Define props using imported Guest type
 interface GuestStatsProps {
   guests: Guest[];
 }
@@ -78,8 +74,7 @@ const GuestStats: React.FC<GuestStatsProps> = ({ guests }) => {
             className='h-4 w-4 text-muted-foreground'>
             <path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'></path>
             <circle cx='9' cy='7' r='4'></circle>
-          </svg>{' '}
-          {/* Simple user icon */}
+          </svg>
         </CardHeader>
         <CardContent>
           <div className='text-2xl font-bold'>{totalConfirmedAdults}</div>
@@ -124,8 +119,7 @@ const GuestStats: React.FC<GuestStatsProps> = ({ guests }) => {
             strokeWidth='2'
             className='h-4 w-4 text-muted-foreground'>
             <path d='M22 12h-4l-3 9L9 3l-3 9H2'></path>
-          </svg>{' '}
-          {/* Activity icon */}
+          </svg>
         </CardHeader>
         <CardContent>
           <div className='text-2xl font-bold'>{totalPending}</div>
