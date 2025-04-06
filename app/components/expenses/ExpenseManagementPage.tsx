@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -26,7 +26,170 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Expense, ApiResponse } from '@/app/types';
+
+// Componente para mostrar las estadísticas de gastos
+const ExpenseStats = ({ expenses }: { expenses: Expense[] }) => {
+  // Cálculos para las estadísticas
+  const stats = useMemo(() => {
+    const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+
+    const totalByPerson = expenses.reduce(
+      (acc, expense) => {
+        if (expense.paidBy === 'Eli') {
+          acc.eli += expense.amount;
+        } else if (expense.paidBy === 'Pan') {
+          acc.pan += expense.amount;
+        }
+        return acc;
+      },
+      { eli: 0, pan: 0 }
+    );
+
+    const totalReimbursed = expenses
+      .filter((expense) => expense.isReimbursed)
+      .reduce((sum, expense) => sum + expense.amount, 0);
+
+    const totalPending = total - totalReimbursed;
+
+    // Calcular diferencia entre Eli y Pan
+    const difference = Math.abs(totalByPerson.eli - totalByPerson.pan);
+    const personWithMore =
+      totalByPerson.eli > totalByPerson.pan ? 'Eli' : 'Pan';
+    const personWithLess = personWithMore === 'Eli' ? 'Pan' : 'Eli';
+
+    // Calcular cuánto debe pagar cada uno
+    const equalShare = total / 2;
+    const amountToPay = difference / 2;
+
+    return {
+      total,
+      totalByPerson,
+      totalReimbursed,
+      totalPending,
+      difference,
+      personWithMore,
+      personWithLess,
+      amountToPay,
+    };
+  }, [expenses]);
+
+  // Formateo de moneda
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+    }).format(amount);
+  };
+
+  return (
+    <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6'>
+      {/* Total de Gastos */}
+      <Card>
+        <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+          <CardTitle className='text-sm font-medium'>Total de Gastos</CardTitle>
+          <svg
+            xmlns='http://www.w3.org/2000/svg'
+            viewBox='0 0 24 24'
+            fill='none'
+            stroke='currentColor'
+            strokeWidth='2'
+            strokeLinecap='round'
+            strokeLinejoin='round'
+            className='h-4 w-4 text-muted-foreground'>
+            <path d='M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' />
+          </svg>
+        </CardHeader>
+        <CardContent>
+          <div className='text-2xl font-bold'>
+            {formatCurrency(stats.total)}
+          </div>
+          <p className='text-xs text-muted-foreground'>
+            Total gastado para el evento
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Gastos por persona */}
+      <Card>
+        <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+          <CardTitle className='text-sm font-medium'>
+            Gastos por Persona
+          </CardTitle>
+          <svg
+            xmlns='http://www.w3.org/2000/svg'
+            viewBox='0 0 24 24'
+            fill='none'
+            stroke='currentColor'
+            strokeWidth='2'
+            strokeLinecap='round'
+            strokeLinejoin='round'
+            className='h-4 w-4 text-muted-foreground'>
+            <path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' />
+            <circle cx='9' cy='7' r='4' />
+            <path d='M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75' />
+          </svg>
+        </CardHeader>
+        <CardContent>
+          <div className='space-y-1'>
+            <div className='flex justify-between'>
+              <span>Eli:</span>
+              <span className='font-medium'>
+                {formatCurrency(stats.totalByPerson.eli)}
+              </span>
+            </div>
+            <div className='flex justify-between'>
+              <span>Pan:</span>
+              <span className='font-medium'>
+                {formatCurrency(stats.totalByPerson.pan)}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Estado de Reembolsos */}
+      <Card>
+        <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+          <CardTitle className='text-sm font-medium'>
+            Estado Reembolsos
+          </CardTitle>
+          <svg
+            xmlns='http://www.w3.org/2000/svg'
+            viewBox='0 0 24 24'
+            fill='none'
+            stroke='currentColor'
+            strokeWidth='2'
+            strokeLinecap='round'
+            strokeLinejoin='round'
+            className='h-4 w-4 text-muted-foreground'>
+            <path d='M2 17a5 5 0 0 1 5-5h10a5 5 0 0 1 5 5v0a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5v0z' />
+            <path d='M6 9v4' />
+            <path d='M10 9v4' />
+            <path d='M2 12h20' />
+          </svg>
+        </CardHeader>
+        <CardContent>
+          <div className='space-y-1'>
+            <div className='flex justify-between'>
+              <span>Reembolsado:</span>
+              <span className='font-medium'>
+                {formatCurrency(stats.totalReimbursed)}
+              </span>
+            </div>
+            <div className='flex justify-between'>
+              <span>Pendiente:</span>
+              <span className='font-medium'>
+                {formatCurrency(stats.totalPending)}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
 
 const ExpenseManagementPage: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -220,6 +383,11 @@ const ExpenseManagementPage: React.FC = () => {
         <div className='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4'>
           {error}
         </div>
+      )}
+
+      {/* Añadir el componente de estadísticas */}
+      {!isLoading && expenses.length > 0 && (
+        <ExpenseStats expenses={expenses} />
       )}
 
       <form onSubmit={handleSubmit} className='mb-8 space-y-4'>
