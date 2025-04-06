@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import AddGuestForm from './AddGuestForm'; // Importar AddGuestForm
 import GuestList from './GuestList'; // Importar GuestList
 import GuestStats from './GuestStats'; // Import the new stats component
-import { Button } from '@/components/ui/button'; // Import Button for export/import
 // Import Skeleton for loading state
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Guest, ApiResponse } from '@/app/types'; // Import shared types using alias
+import { Button } from '@/components/ui/button';
 // Importaremos los otros componentes aquí más tarde
 
 const GuestManagementPage: React.FC = () => {

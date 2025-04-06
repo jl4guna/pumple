@@ -1,0 +1,11 @@
+-- Create expenses table
+CREATE TABLE IF NOT EXISTS expenses (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  concept TEXT NOT NULL,
+  amount REAL NOT NULL,
+  payment_date TEXT NOT NULL,
+  is_reimbursed BOOLEAN NOT NULL DEFAULT FALSE,
+  paid_by TEXT NOT NULL CHECK (paid_by IN ('Eli', 'Pan')),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+); 

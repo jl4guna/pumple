@@ -263,6 +263,118 @@ app.post('/api/guests/import', async (c) => {
   }
 });
 
+// Expenses endpoints
+app.get('/api/expenses', async (c) => {
+  try {
+    const { results } = await c.env.DB.prepare(
+      'SELECT * FROM expenses ORDER BY payment_date DESC'
+    ).all();
+
+    // Transformar los resultados a camelCase para el cliente
+    const formattedResults = results.map((expense) => ({
+      id: expense.id,
+      concept: expense.concept,
+      amount: expense.amount,
+      paymentDate: expense.payment_date,
+      isReimbursed:
+        expense.is_reimbursed === 1 || expense.is_reimbursed === true,
+      paidBy: expense.paid_by,
+      createdAt: expense.created_at,
+      updatedAt: expense.updated_at,
+    }));
+
+    return c.json({ success: true, data: formattedResults });
+  } catch (error) {
+    console.error('Error al obtener gastos:', error);
+    return c.json({ success: false, error: 'Error al obtener gastos' }, 500);
+  }
+});
+
+app.post('/api/expenses', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { concept, amount, paymentDate, isReimbursed, paidBy } = body;
+
+    console.log('Recibiendo datos para crear gasto:', body);
+
+    const { success } = await c.env.DB.prepare(
+      'INSERT INTO expenses (concept, amount, payment_date, is_reimbursed, paid_by) VALUES (?, ?, ?, ?, ?)'
+    )
+      .bind(concept, amount, paymentDate, isReimbursed ? 1 : 0, paidBy)
+      .run();
+
+    if (success) {
+      const { results } = await c.env.DB.prepare(
+        'SELECT * FROM expenses WHERE id = last_insert_rowid()'
+      ).all();
+
+      if (results && results.length > 0) {
+        // Transformar el resultado a camelCase para el cliente
+        const newExpense = {
+          id: results[0].id,
+          concept: results[0].concept,
+          amount: results[0].amount,
+          paymentDate: results[0].payment_date,
+          isReimbursed:
+            results[0].is_reimbursed === 1 || results[0].is_reimbursed === true,
+          paidBy: results[0].paid_by,
+          createdAt: results[0].created_at,
+          updatedAt: results[0].updated_at,
+        };
+
+        return c.json({ success: true, data: newExpense });
+      }
+    }
+    return c.json({ success: false, error: 'Error al crear gasto' }, 500);
+  } catch (error) {
+    console.error('Error al crear gasto:', error);
+    return c.json({ success: false, error: 'Error al crear gasto' }, 500);
+  }
+});
+
+app.patch('/api/expenses/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json();
+    const { isReimbursed } = body;
+
+    const { success } = await c.env.DB.prepare(
+      'UPDATE expenses SET is_reimbursed = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+    )
+      .bind(isReimbursed ? 1 : 0, id)
+      .run();
+
+    if (success) {
+      const { results } = await c.env.DB.prepare(
+        'SELECT * FROM expenses WHERE id = ?'
+      )
+        .bind(id)
+        .all();
+
+      if (results && results.length > 0) {
+        // Transformar el resultado a camelCase para el cliente
+        const updatedExpense = {
+          id: results[0].id,
+          concept: results[0].concept,
+          amount: results[0].amount,
+          paymentDate: results[0].payment_date,
+          isReimbursed:
+            results[0].is_reimbursed === 1 || results[0].is_reimbursed === true,
+          paidBy: results[0].paid_by,
+          createdAt: results[0].created_at,
+          updatedAt: results[0].updated_at,
+        };
+
+        return c.json({ success: true, data: updatedExpense });
+      }
+    }
+    return c.json({ success: false, error: 'Error al actualizar gasto' }, 500);
+  } catch (error) {
+    console.error('Error al actualizar gasto:', error);
+    return c.json({ success: false, error: 'Error al actualizar gasto' }, 500);
+  }
+});
+
 // ----- Main Fetch Handler -----
 export default {
   async fetch(

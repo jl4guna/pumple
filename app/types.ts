@@ -19,3 +19,22 @@ export interface ApiResponse<T = any> {
   details?: string;
   message?: string;
 }
+
+export interface Expense {
+  id: number;
+  concept: string;
+  amount: number;
+  paymentDate: string;
+  isReimbursed: boolean;
+  paidBy: 'Eli' | 'Pan';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+  count?: number;
+}
