@@ -17,6 +17,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import type { Expense, ApiResponse } from '@/app/types';
 
 const ExpenseManagementPage: React.FC = () => {
@@ -28,6 +37,16 @@ const ExpenseManagementPage: React.FC = () => {
     amount: '',
     paymentDate: new Date().toISOString().split('T')[0],
     isReimbursed: false,
+    paidBy: 'Eli' as 'Eli' | 'Pan',
+  });
+
+  // Estado para edición
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    concept: '',
+    amount: '',
+    paymentDate: '',
     paidBy: 'Eli' as 'Eli' | 'Pan',
   });
 
@@ -57,12 +76,6 @@ const ExpenseManagementPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Para depuración
-      console.log('Enviando datos:', {
-        ...newExpense,
-        amount: parseFloat(newExpense.amount),
-      });
-
       const response = await fetch('/api/expenses', {
         method: 'POST',
         headers: {
@@ -115,6 +128,75 @@ const ExpenseManagementPage: React.FC = () => {
     }
   };
 
+  // Función para eliminar un gasto
+  const handleDeleteExpense = async (id: number) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este gasto?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/expenses/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Actualizar el estado local eliminando el gasto
+        setExpenses(expenses.filter((expense) => expense.id !== id));
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || 'Error al eliminar gasto');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error desconocido');
+    }
+  };
+
+  // Funciones para editar un gasto
+  const handleEditClick = (expense: Expense) => {
+    setEditingExpense(expense);
+    setEditForm({
+      concept: expense.concept,
+      amount: expense.amount.toString(),
+      paymentDate: expense.paymentDate,
+      paidBy: expense.paidBy,
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingExpense) return;
+
+    try {
+      const response = await fetch(`/api/expenses/${editingExpense.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...editForm,
+          amount: parseFloat(editForm.amount),
+        }),
+      });
+
+      const data: ApiResponse = await response.json();
+
+      if (data.success && data.data) {
+        // Actualizar el estado local con el gasto editado
+        setExpenses(
+          expenses.map((exp) =>
+            exp.id === editingExpense.id ? data.data : exp
+          )
+        );
+        setIsEditDialogOpen(false);
+      } else {
+        throw new Error(data.error || 'Error al actualizar gasto');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error desconocido');
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',
@@ -128,12 +210,6 @@ const ExpenseManagementPage: React.FC = () => {
     } catch (e) {
       return dateString || 'Fecha inválida';
     }
-  };
-
-  // Para depuración
-  const logData = (expense: any) => {
-    console.log('Datos del gasto recibido:', expense);
-    return expense;
   };
 
   return (
@@ -181,7 +257,6 @@ const ExpenseManagementPage: React.FC = () => {
             <Select
               value={newExpense.paidBy}
               onValueChange={(value: 'Eli' | 'Pan') => {
-                console.log('Pagado por seleccionado:', value);
                 setNewExpense({ ...newExpense, paidBy: value });
               }}>
               <SelectTrigger>
@@ -220,6 +295,7 @@ const ExpenseManagementPage: React.FC = () => {
               <TableHead>Fecha</TableHead>
               <TableHead>Pagado por</TableHead>
               <TableHead>Reembolsado</TableHead>
+              <TableHead>Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -227,23 +303,128 @@ const ExpenseManagementPage: React.FC = () => {
               <TableRow key={expense.id}>
                 <TableCell>{expense.concept}</TableCell>
                 <TableCell>{formatCurrency(expense.amount)}</TableCell>
-                <TableCell>
-                  {formatDate(expense.payment_date || expense.paymentDate)}
-                </TableCell>
-                <TableCell>{expense.paid_by || expense.paidBy}</TableCell>
+                <TableCell>{formatDate(expense.paymentDate)}</TableCell>
+                <TableCell>{expense.paidBy}</TableCell>
                 <TableCell>
                   <Checkbox
-                    checked={expense.is_reimbursed || expense.isReimbursed}
+                    checked={expense.isReimbursed}
                     onCheckedChange={(checked) =>
                       handleUpdateReimbursed(expense.id, !!checked)
                     }
                   />
+                </TableCell>
+                <TableCell>
+                  <div className='flex space-x-2'>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => handleEditClick(expense)}>
+                      Editar
+                    </Button>
+                    <Button
+                      variant='destructive'
+                      size='sm'
+                      onClick={() => handleDeleteExpense(expense.id)}>
+                      Eliminar
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       )}
+
+      {/* Diálogo de edición */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Gasto</DialogTitle>
+            <DialogDescription>
+              Actualiza los detalles del gasto
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleEditSubmit} className='space-y-4 py-4'>
+            <div className='space-y-4'>
+              <div>
+                <label htmlFor='edit-concept' className='text-sm font-medium'>
+                  Concepto
+                </label>
+                <Input
+                  id='edit-concept'
+                  value={editForm.concept}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, concept: e.target.value })
+                  }
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor='edit-amount' className='text-sm font-medium'>
+                  Monto
+                </label>
+                <Input
+                  id='edit-amount'
+                  type='number'
+                  value={editForm.amount}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, amount: e.target.value })
+                  }
+                  required
+                  min='0'
+                  step='0.01'
+                />
+              </div>
+
+              <div>
+                <label htmlFor='edit-date' className='text-sm font-medium'>
+                  Fecha
+                </label>
+                <Input
+                  id='edit-date'
+                  type='date'
+                  value={editForm.paymentDate}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, paymentDate: e.target.value })
+                  }
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor='edit-paidBy' className='text-sm font-medium'>
+                  Pagado por
+                </label>
+                <Select
+                  value={editForm.paidBy}
+                  onValueChange={(value: 'Eli' | 'Pan') =>
+                    setEditForm({ ...editForm, paidBy: value })
+                  }>
+                  <SelectTrigger>
+                    <SelectValue placeholder='Pagado por' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='Eli'>Eli</SelectItem>
+                    <SelectItem value='Pan'>Pan</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type='button'
+                variant='outline'
+                onClick={() => setIsEditDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type='submit'>Guardar Cambios</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

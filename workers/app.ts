@@ -375,6 +375,74 @@ app.patch('/api/expenses/:id', async (c) => {
   }
 });
 
+// DELETE /api/expenses/:id - Eliminar un gasto
+app.delete('/api/expenses/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+
+    const { success, meta } = await c.env.DB.prepare(
+      'DELETE FROM expenses WHERE id = ?'
+    )
+      .bind(id)
+      .run();
+
+    if (success && meta.changes > 0) {
+      return c.json({ success: true });
+    } else if (success && meta.changes === 0) {
+      return c.json({ success: false, error: 'Gasto no encontrado' }, 404);
+    } else {
+      throw new Error('Error al eliminar el gasto');
+    }
+  } catch (error) {
+    console.error('Error al eliminar gasto:', error);
+    return c.json({ success: false, error: 'Error al eliminar gasto' }, 500);
+  }
+});
+
+// Endpoint para actualizar un gasto completamente (excepto estado reembolsado)
+app.put('/api/expenses/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json();
+    const { concept, amount, paymentDate, paidBy } = body;
+
+    const { success } = await c.env.DB.prepare(
+      'UPDATE expenses SET concept = ?, amount = ?, payment_date = ?, paid_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+    )
+      .bind(concept, amount, paymentDate, paidBy, id)
+      .run();
+
+    if (success) {
+      const { results } = await c.env.DB.prepare(
+        'SELECT * FROM expenses WHERE id = ?'
+      )
+        .bind(id)
+        .all();
+
+      if (results && results.length > 0) {
+        // Transformar el resultado a camelCase para el cliente
+        const updatedExpense = {
+          id: results[0].id,
+          concept: results[0].concept,
+          amount: results[0].amount,
+          paymentDate: results[0].payment_date,
+          isReimbursed:
+            results[0].is_reimbursed === 1 || results[0].is_reimbursed === true,
+          paidBy: results[0].paid_by,
+          createdAt: results[0].created_at,
+          updatedAt: results[0].updated_at,
+        };
+
+        return c.json({ success: true, data: updatedExpense });
+      }
+    }
+    return c.json({ success: false, error: 'Error al actualizar gasto' }, 500);
+  } catch (error) {
+    console.error('Error al actualizar gasto:', error);
+    return c.json({ success: false, error: 'Error al actualizar gasto' }, 500);
+  }
+});
+
 // ----- Main Fetch Handler -----
 export default {
   async fetch(
